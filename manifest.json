@@ -1,0 +1,21 @@
+{
+  "name": "Alarms API Demo",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "storage",
+    "unlimited_storage"
+  ],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "content_scripts": [{
+      "js": ["contentscript.js"],
+      "matches": ["https://gamesdonequick.com/*"]
+  }],
+  "web_accessible_resources": [{
+    "resources": ["gdqPageScript.js"],
+    "matches": ["https://gamesdonequick.com/*"]
+  }],
+  "action": {}
+}
