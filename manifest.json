@@ -12,11 +12,11 @@
   },
   "content_scripts": [{
       "js": ["contentscript.js", "sentry.js"],
-      "matches": ["https://gamesdonequick.com/*"]
+      "matches": ["https://gamesdonequick.com/*", "https://twitch.com/*"]
   }],
   "web_accessible_resources": [{
     "resources": ["gdqPageScript.js"],
-    "matches": ["https://gamesdonequick.com/*"]
+    "matches": ["https://gamesdonequick.com/*", "https://twitch.com/*"]
   }],
   "action": {}
 }
