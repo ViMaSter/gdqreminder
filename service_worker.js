@@ -28,7 +28,7 @@ const storage = {
     }
 };
 
-const DEBUG = true;
+const DEBUG = false;
 const generalUpdateInterval = DEBUG ? 5000 : 5 * 60 * 1000; // 5 minutes
 let nextUpdateTimeout = null;
 
@@ -77,7 +77,7 @@ const updateLoop = async () => {
         return;
     }
 
-    const gdqData = await (await fetch(DEBUG ? "https://vimaster.de/tmp/gdq/fake.php" : `https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${shorthand}`)).json();
+    const gdqData = await (await fetch(DEBUG ? "https://vimaster.de/tmp/gdq/fake.php" : `https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${currentShorthand}`)).json();
     const now = new Date();
 
     // find all runs with end times in the past...
@@ -183,4 +183,12 @@ chrome.notifications.onClicked.addListener(function(id) {
     )
 });
 
-updateLoop();
+const findCurrentRun = async () => {
+    const events = await (await fetch("https://gamesdonequick.com/tracker/api/v1/search/?type=event")).json();
+    return events.filter(e=>e.fields.short.toLowerCase().includes("gdq")).sort((a,b)=>new Date(b.fields.datetime) - new Date(a.fields.datetime)).filter(b=>new Date(b.fields.datetime) < new Date())[0].fields.short;
+}
+
+(async () => {
+    currentShorthand = await findCurrentRun();
+    updateLoop();
+})();
