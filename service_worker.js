@@ -5,7 +5,7 @@ Sentry.init
     dsn:
     "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
     tracesSampleRate: 1.0,
-    release: "0.2.0",
+    release: "0.2.1",
 });
 
 const gdqIcon = "icon/192.png";
@@ -155,7 +155,7 @@ const getTwitchRun = async (gdqData) => {
     {
         return null;
     }
-    let currentTwitchGameData = gdqData.find(entry => currentTwitchGameTitle.includes(entry.fields.display_name));
+    let currentTwitchGameData = gdqData.find(entry => currentTwitchGameTitle.includes(entry.fields.twitch_name || entry.fields.display_name));
     if (!currentTwitchGameData)
     {
         return null;
@@ -211,9 +211,12 @@ const updateLoop = async () => {
     // get current data on twitch
     let currentTwitchRun = await getTwitchRun(gdqData);
     // if it's a run we care about, inform the user about a soon start
-    if (storageDataEntries.map(e=>e[0]).includes(currentTwitchRun.pk.toString()))
+    if (currentTwitchRun)
     {
-        changedRuntimeTrackedRuns.push(currentTwitchRun);
+        if (storageDataEntries.map(e=>e[0]).includes(currentTwitchRun.pk.toString()))
+        {
+            changedRuntimeTrackedRuns.push(currentTwitchRun);
+        }
     }
 
     console.log("ended tracked runs: " + endedTrackedRuns.map(entry => entry.fields.display_name));
