@@ -4,7 +4,8 @@
   "manifest_version": 3,
   "permissions": [
     "storage",
-    "unlimited_storage"
+    "unlimited_storage",
+    "notifications"
   ],
   "background": {
     "service_worker": "service_worker.js"
