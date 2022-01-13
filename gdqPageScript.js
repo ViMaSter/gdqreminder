@@ -1,4 +1,12 @@
 (async () => {
+    window.addEventListener("load", function () {
+        Sentry.init({
+          dsn:
+            "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
+          tracesSampleRate: 1.0,
+        });
+      });
+
     if (!location.href.includes("/schedule")) {
         return;
     }
@@ -24,6 +32,14 @@
     }
     tr.current {
         background-color: hsl(116deg 85% 43% / 47%);
+    }
+    tr {
+        border-left: 50px solid transparent;
+        border-right: 50px solid transparent;
+    }
+    tr.checked {
+        border-left: 50px solid rgba(0, 0, 0, 0.75);
+        border-right: 50px solid rgba(0, 0, 0, 0.75);
     }
     `;
     document.body.appendChild(style);
@@ -75,25 +91,6 @@
                 <td rowspan="2" class="visible-lg text-center"> <i class="fa fa-clock-o text-gdq-red" aria-hidden="true"></i> ${entry.fields.setup_time} </td>
                 <td rowspan="2" class="text-center"> </td>`;
 
-
-            const input = document.createElement("input");
-            input.type = "checkbox";
-            input.value = entry.pk;
-            input.checked = watchedPK.includes(entry.pk);
-            input.disabled = now > startTime;
-            input.addEventListener("change", ((formerPK) => async (element) => {
-                    await storage.set(element.target.value.toString(), {
-                        previousPK: formerPK,
-                        haveNotifiedAboutPreviousRuntime: false,
-                        haveNotifiedAboutRunning: false
-                    });
-                })(previousPK));
-            
-            previousPK = entry.pk;
-
-            row1.querySelector("td:last-child").append(input);
-            row1.querySelector("td:last-child").append(" Remind");
-
             const row2 = document.createElement("tr");
             row2.classList.add("second-row");
             row2.innerHTML = `<tr class="second-row">
@@ -101,6 +98,44 @@
                 <td>${entry.fields.category} — ${entry.fields.console}</td>
                 <td></td>
             </tr>`;
+
+
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.id = entry.pk;
+            input.value = entry.pk;
+            input.checked = watchedPK.includes(entry.pk);
+            input.disabled = now > startTime;
+            input.addEventListener("change", ((formerPK) => async (element) => {
+                    if (element.target.checked) {
+                        row1.classList.add("checked");
+                        row2.classList.add("checked");
+                    }
+                    else
+                    {
+                        row1.classList.remove("checked");
+                        row2.classList.remove("checked");
+                    }
+                    await storage.set(element.target.value.toString(), element.target.checked ? {
+                        previousPK: formerPK,
+                        haveNotifiedAboutPreviousRuntime: false,
+                        haveNotifiedAboutRunning: false
+                    } : null);
+                })(previousPK));
+            const label = document.createElement("label");
+            label.htmlFor = entry.pk;
+            label.innerText = " Remind";
+            
+            previousPK = entry.pk;
+
+            row1.querySelector("td:last-child").append(input);
+            row1.querySelector("td:last-child").append(label);
+
+            if (input.checked)
+            {
+                row1.classList.add("checked");
+                row2.classList.add("checked");
+            }
             if (endTime < now)
             {
                 row1.classList.add("passed");

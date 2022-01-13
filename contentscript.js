@@ -1,3 +1,11 @@
+window.addEventListener("load", function () {
+    Sentry.init({
+      dsn:
+        "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
+      tracesSampleRate: 1.0,
+    });
+  });
+
 const storage = {
     key: "gdqEvents",
     get: async (key) => {
