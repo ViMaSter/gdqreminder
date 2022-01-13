@@ -1,3 +1,44 @@
+let lifeline;
+
+keepAlive();
+
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name === 'keepAlive') {
+    lifeline = port;
+    setTimeout(keepAliveForced, 295e3); // 5 minutes minus 5 seconds
+    port.onDisconnect.addListener(keepAliveForced);
+  }
+});
+
+function keepAliveForced() {
+  lifeline?.disconnect();
+  lifeline = null;
+  keepAlive();
+}
+
+async function keepAlive() {
+  if (lifeline) return;
+  for (const tab of await chrome.tabs.query({ url: '*://*/*' })) {
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        function: () => chrome.runtime.connect({ name: 'keepAlive' }),
+        // `function` will become `func` in Chrome 93+
+      });
+      chrome.tabs.onUpdated.removeListener(retryOnTabUpdate);
+      return;
+    } catch (e) {}
+  }
+  chrome.tabs.onUpdated.addListener(retryOnTabUpdate);
+}
+
+async function retryOnTabUpdate(tabId, info, tab) {
+  if (info.url && /^(file|https?):/.test(info.url)) {
+    keepAlive();
+  }
+}
+
+/// gdq reminder
 const storage = {
     key: "gdqEvents",
     get: async (key) => {
@@ -29,7 +70,7 @@ const storage = {
 };
 
 const DEBUG = false;
-const generalUpdateInterval = DEBUG ? 5000 : 5 * 60 * 1000; // 5 minutes
+const generalUpdateInterval = DEBUG ? 5000 : 2 * 60 * 1000; // 2 minutes
 let nextUpdateTimeout = null;
 
 let lastKeys = [];
@@ -77,7 +118,7 @@ const updateLoop = async () => {
         return;
     }
 
-    const gdqData = await (await fetch(DEBUG ? "https://vimaster.de/tmp/gdq/fake.php" : `https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${currentShorthand}`)).json();
+    const gdqData = await (await fetch(DEBUG ? "https://vimaster.de/tmp/gdq/fake.php" : `https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${await storage.get("shorthand")}`)).json();
     const now = new Date();
 
     // find all runs with end times in the past...
@@ -185,10 +226,11 @@ chrome.notifications.onClicked.addListener(function(id) {
 
 const findCurrentRun = async () => {
     const events = await (await fetch("https://gamesdonequick.com/tracker/api/v1/search/?type=event")).json();
-    return events.filter(e=>e.fields.short.toLowerCase().includes("gdq")).sort((a,b)=>new Date(b.fields.datetime) - new Date(a.fields.datetime)).filter(b=>new Date(b.fields.datetime) < new Date())[0].fields.short;
+    const shorthand = events.filter(e=>e.fields.short.toLowerCase().includes("gdq")).sort((a,b)=>new Date(b.fields.datetime) - new Date(a.fields.datetime)).filter(b=>new Date(b.fields.datetime) < new Date())[0].fields.short;
+    await storage.set("shorthand", shorthand);
 }
 
 (async () => {
-    currentShorthand = await findCurrentRun();
+    await findCurrentRun();
     updateLoop();
 })();
