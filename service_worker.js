@@ -5,7 +5,7 @@ Sentry.init
     dsn:
     "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
     tracesSampleRate: 1.0,
-    release: "0.2.1",
+    release: "0.3.0",
 });
 
 const gdqIcon = "icon/192.png";
@@ -175,8 +175,9 @@ const updateLoop = async () => {
     if (remainingRunData.length < 1) {
         return;
     }
+    const shorthand = await storage.get("shorthand");
 
-    const gdqData = await (await fetch(DEBUG ? "https://vimaster.de/tmp/gdq/fake.php" : `https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${await storage.get("shorthand")}`)).json();
+    const gdqData = await (await fetch(DEBUG ? "https://vimaster.de/tmp/gdq/fake.php" : `https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${shorthand}`)).json();
     const now = new Date();
 
     // find all runs with end times in the past...
@@ -221,7 +222,7 @@ const updateLoop = async () => {
 
     console.log("ended tracked runs: " + endedTrackedRuns.map(entry => entry.fields.display_name));
     endedTrackedRuns.forEach(entry => {
-        notifyAboutMiss(gdqData, entry.pk);
+        notifyAboutMiss(gdqData, entry.pk, shorthand);
         storageData[entry.pk].haveNotifiedAboutRunning = true;
     });
     console.log("started tracked runs: " + startedTrackedRuns.map(entry => entry.fields.display_name));
@@ -242,9 +243,9 @@ const updateLoop = async () => {
     nextUpdateTimeout = setTimeout(updateLoop, generalUpdateInterval);
 };
 
-const notifyAboutMiss = async (gdqData, pk) => {
+const notifyAboutMiss = async (gdqData, pk, shorthand) => {
     const pkAsInt = parseInt(pk);
-    chrome.notifications.create(pk+"missed", {
+    chrome.notifications.create(pk+"missed"+shorthand, {
         type: 'basic',
         iconUrl: gdqIcon,
         title: "You missed a run!",
@@ -276,10 +277,12 @@ const notifyAboutPreviousRuntime = async (gdqData, pk) => {
 chrome.notifications.onClicked.addListener(function(id) {
     if (id.includes("missed"))
     {
+        const [pk, shorthand] = id.split("missed");
+        const run = lastGDQData.find(entry=>entry.pk == pk);
         chrome.tabs.create(
             {
                active: true,
-               url: "https://www.youtube.com/c/gamesdonequick/videos"
+               url: `https://www.youtube.com/c/gamesdonequick/search?query=${run.fields.twitch_data || run.fields.display_name}%20${shorthand}`
            }
        );
        return;

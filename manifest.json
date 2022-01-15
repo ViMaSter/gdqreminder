@@ -1,6 +1,6 @@
 {
   "name": "GDQ Run Reminder",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Sends desktop notifications via the gamesdonequick.com schedule.",
   "manifest_version": 3,
   "icons": {
@@ -22,7 +22,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["gdqPageScript.js"],
+      "resources": ["gdqPageScript.js", "sentry.js"],
       "matches": ["https://gamesdonequick.com/*", "https://twitch.com/*"]
     }
   ],
