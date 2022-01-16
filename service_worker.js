@@ -5,7 +5,7 @@ Sentry.init
     dsn:
     "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
     tracesSampleRate: 1.0,
-    release: "0.4.0",
+    release: "0.5.0",
 });
 
 const gdqIcon = "icon/192.png";
@@ -273,8 +273,27 @@ const notifyAboutPreviousRuntime = async (gdqData, pk) => {
         priority: 2
     });
 };
+const notifyAboutNewSchedule = async (shorthand) => {
+    chrome.notifications.create(shorthand+"schedule", {
+        type: 'basic',
+        iconUrl: gdqIcon,
+        title: `${shorthand.toUpperCase()} SCHEDULE RELEASED`,
+        message: `Click this notification to check out the runs and runners!`,
+        priority: 2
+    });
+};
 
 chrome.notifications.onClicked.addListener(function(id) {
+    if (id.includes("schedule"))
+    {
+        chrome.tabs.create(
+            {
+               active: true,
+               url: `https://www.gamesdonequick.com/schedule`
+           }
+       );
+       return;
+    }
     if (id.includes("missed"))
     {
         const [pk, shorthand] = id.split("missed");
@@ -298,8 +317,20 @@ chrome.notifications.onClicked.addListener(function(id) {
 
 const findCurrentRun = async () => {
     const events = await (await fetch("https://gamesdonequick.com/tracker/api/v1/search/?type=event")).json();
-    const shorthand = events.filter(e=>e.fields.short.toLowerCase().includes("gdq")).sort((a,b)=>new Date(b.fields.datetime) - new Date(a.fields.datetime)).filter(b=>new Date(b.fields.datetime) < new Date())[0].fields.short;
-    await storage.set("shorthand", shorthand);
+    const currentShorthand = events.filter(e=>e.fields.short.toLowerCase().includes("gdq")).sort((a,b)=>new Date(b.fields.datetime) - new Date(a.fields.datetime)).filter(b=>new Date(b.fields.datetime) < new Date())[0].fields.short;
+    const storedShorthand = await storage.get("shorthand");
+    if (typeof storedShorthand == "string")
+    {
+        if (currentShorthand != storedShorthand)
+        {
+            const newRuns = await (await fetch(`https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${currentShorthand}`)).json()
+            if (newRuns.length > 0)
+            {
+                notifyAboutNewSchedule(currentShorthand);
+            }
+        }
+    }
+    await storage.set("shorthand", currentShorthand);
 }
 
 (async () => {
