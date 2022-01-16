@@ -4,7 +4,7 @@
           dsn:
             "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
           tracesSampleRate: 1.0,
-          release: "0.3.0",
+          release: "0.4.0",
         });
       });
 
@@ -50,6 +50,7 @@
     table {
         overflow: inherit !important;
     }
+
     thead th {
       position: sticky;
       top: 0;
@@ -57,15 +58,21 @@
       text-align: center;
       color: white;
       z-index: 1000;
+      border-top: 0 !important;
+      border-bottom: 0 !important;
     }
-    tr.offset th {
+
+    .table>tbody>tr.offset>th {
       position: sticky;
       top: 34px;
       background-color: #333!important;
       text-align: left;
       color: white;
       z-index: 1000;
+      border-top: 0 !important;
+      border-bottom: 0 !important;
     }
+    
     .details {
         font-size: 75%;
         color: #777;
@@ -79,6 +86,8 @@
     document.addEventListener('updateGDQReminderData', async (e) => {
         const shorthand = document.querySelector("h1").innerText.split(" ")[0];
         const runs = await (await fetch(`https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${shorthand}`)).json();
+        const lastRun = runs.sort((a, b) => new Date(b.fields.endtime).getTime() - new Date(a.fields.endtime).getTime())[0];
+        const hasCompleted = new Date(lastRun.fields.endtime).getTime() < Date.now();
 
         const watchedPK = e.detail ? Object.keys(e.detail).map(pk => parseInt(pk)) : [];
 
@@ -93,7 +102,7 @@
             <th>Length</td>
             <th>Run</td>
             <th class="visible-lg"><i class="fa fa-microphone"></i> Runners &amp; Host</td>
-            <th>Set&nbsp;Reminder?</td>
+            ${hasCompleted ? '' : '<th>Set&nbsp;Reminder?</td>'}
         </tr>`;
         newTable.appendChild(head);
 
@@ -119,46 +128,49 @@
                 <td class="text-right"><span class="timefont">${entry.fields.run_time == "0" ? "0:00:00" : entry.fields.run_time}</span> </td>
                 <td>${entry.fields.display_name} <span class="details">(${entry.fields.category} — ${entry.fields.console})</span></td>
                 <td>${entry.fields.deprecated_runners}</td>
-                <td class="text-center"> </td>`;
+                ${hasCompleted ? '' : '<td class="text-center"> </td>'}`;
 
 
-            const input = document.createElement("input");
-            input.type = "checkbox";
-            input.id = entry.pk;
-            input.value = entry.pk;
-            input.checked = watchedPK.includes(entry.pk);
-            input.disabled = now > startTime;
-            input.addEventListener("change", ((formerPK) => async (element) => {
-                    if (element.target.checked) {
-                        row1.classList.add("checked");
-                    }
-                    else
-                    {
-                        row1.classList.remove("checked");
-                    }
-                    await storage.set(element.target.value.toString(), element.target.checked ? {
-                        previousPK: formerPK,
-                        haveNotifiedAboutPreviousRuntime: false,
-                        haveNotifiedAboutRunning: false
-                    } : null);
-                })(previousPK));
-            
-            previousPK = entry.pk;
-
-            row1.querySelector("td:last-child").append(input);
-
-            if (input.checked)
+            if (!hasCompleted)
             {
-                row1.classList.add("checked");
-            }
-            if (endTime < now)
-            {
-                row1.classList.add("passed");
-            }
-            if (currentRow == null && startTime < now && endTime > now)
-            {
-                row1.classList.add("current");
-                currentRow = row1;
+                const input = document.createElement("input");
+                input.type = "checkbox";
+                input.id = entry.pk;
+                input.value = entry.pk;
+                input.checked = watchedPK.includes(entry.pk);
+                input.disabled = now > startTime;
+                input.addEventListener("change", ((formerPK) => async (element) => {
+                        if (element.target.checked) {
+                            row1.classList.add("checked");
+                        }
+                        else
+                        {
+                            row1.classList.remove("checked");
+                        }
+                        await storage.set(element.target.value.toString(), element.target.checked ? {
+                            previousPK: formerPK,
+                            haveNotifiedAboutPreviousRuntime: false,
+                            haveNotifiedAboutRunning: false
+                        } : null);
+                    })(previousPK));
+                
+                previousPK = entry.pk;
+    
+                row1.querySelector("td:last-child").append(input);
+    
+                if (input.checked)
+                {
+                    row1.classList.add("checked");
+                }
+                if (endTime < now)
+                {
+                    row1.classList.add("passed");
+                }
+                if (currentRow == null && startTime < now && endTime > now)
+                {
+                    row1.classList.add("current");
+                    currentRow = row1;
+                }
             }
             body.appendChild(row1);
         });
