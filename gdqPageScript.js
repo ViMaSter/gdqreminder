@@ -4,7 +4,7 @@
           dsn:
             "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
           tracesSampleRate: 1.0,
-          release: "0.5.0",
+          release: "0.5.1",
         });
       });
 
@@ -177,11 +177,14 @@
 
         next.parentNode.insertBefore(newTable, next);
 
-        currentRow.scrollIntoView(true);
-        const offset = ((window.innerHeight/5)*2);
-        if (currentRow.getBoundingClientRect().top <= 100)
+        if (currentRow)
         {
-            window.scrollTo(document.documentElement.scrollLeft, document.documentElement.scrollTop-offset);
+            currentRow.scrollIntoView(true);
+            const offset = ((window.innerHeight/5)*2);
+            if (currentRow.getBoundingClientRect().top <= 100)
+            {
+                window.scrollTo(document.documentElement.scrollLeft, document.documentElement.scrollTop-offset);
+            }
         }
     });
 
