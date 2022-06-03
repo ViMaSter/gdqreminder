@@ -5,7 +5,7 @@ Sentry.init
     dsn:
     "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
     tracesSampleRate: 1.0,
-    release: "0.5.1",
+    release: "1.0.0",
 });
 
 const gdqIcon = "icon/192.png";
