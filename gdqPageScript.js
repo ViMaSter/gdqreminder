@@ -23,11 +23,13 @@
 
     const style = document.createElement("style");
     style.innerHTML = `
+    tr:hover {
+        background: #CCC !important;
+    }
     tr.passed {
         opacity: 0.75;
         background-color: rgba(0, 0, 0, 0.5);
     }
-
     tr.passed td {
         border-color: rgba(0, 0, 0, 0.5) !important;
     }
@@ -39,8 +41,7 @@
         border-right: 50px solid transparent;
     }
     tr.checked {
-        border-left: 50px solid rgba(0, 0, 0, 0.75);
-        border-right: 50px solid rgba(0, 0, 0, 0.75);
+        background: hwb(347deg 75% 5%);
     }
     .timefont
     {
@@ -62,7 +63,7 @@
       border-bottom: 0 !important;
     }
 
-    .table>tbody>tr.offset>th {
+    .table > tbody > tr.offset > th {
       position: sticky;
       top: 34px;
       background-color: #333!important;
@@ -76,8 +77,7 @@
     .details {
         font-size: 75%;
         color: #777;
-    }
-    `;
+    }`;
     document.body.appendChild(style);
 
     let currentRow = null;
@@ -123,8 +123,8 @@
                 daySplit.innerHTML = `<th colspan="20">${new Date(startTime).toLocaleDateString(Intl.NumberFormat().resolvedOptions().locale)}</td>`;
                 body.appendChild(daySplit);
             }
-            const row1 = document.createElement("tr");
-            row1.innerHTML = `
+            const rowForRun = document.createElement("tr");
+            rowForRun.innerHTML = `
                 <td class="start-time text-right"><span class="timefont">${startTime.toLocaleTimeString(Intl.NumberFormat().resolvedOptions().locale).replace(/\s/, "&nbsp;")}</span></td>
                 <td class="text-right"><span class="timefont">${entry.fields.run_time == "0" ? "0:00:00" : entry.fields.run_time}</span> </td>
                 <td>${entry.fields.display_name} <span class="details">(${entry.fields.category} — ${entry.fields.console})</span></td>
@@ -140,15 +140,15 @@
                 input.value = entry.pk;
                 input.checked = watchedPK.includes(entry.pk);
                 input.disabled = now > startTime;
-                input.addEventListener("change", ((formerPK) => async (element) => {
-                        if (element.target.checked) {
-                            row1.classList.add("checked");
+                input.addEventListener("change", ((formerPK) => async () => {
+                        if (input.checked) {
+                            rowForRun.classList.add("checked");
                         }
                         else
                         {
-                            row1.classList.remove("checked");
+                            rowForRun.classList.remove("checked");
                         }
-                        await storage.set(element.target.value.toString(), element.target.checked ? {
+                        await storage.set(input.value.toString(), input.checked ? {
                             previousPK: formerPK,
                             haveNotifiedAboutPreviousRuntime: false,
                             haveNotifiedAboutRunning: false
@@ -157,23 +157,32 @@
                 
                 previousPK = entry.pk;
     
-                row1.querySelector("td:last-child").append(input);
+                rowForRun.querySelector("td:last-child").append(input);
     
                 if (input.checked)
                 {
-                    row1.classList.add("checked");
+                    rowForRun.classList.add("checked");
                 }
                 if (endTime < now)
                 {
-                    row1.classList.add("passed");
+                    rowForRun.classList.add("passed");
                 }
                 if (currentRow == null && startTime < now && endTime > now)
                 {
-                    row1.classList.add("current");
-                    currentRow = row1;
+                    rowForRun.classList.add("current");
+                    currentRow = rowForRun;
                 }
+
+                rowForRun.addEventListener("click", (e) => {
+                    if (e.target == input)
+                    {
+                        return;
+                    }
+                    input.checked = !input.checked;
+                    input.dispatchEvent(new Event("change"));
+                });
             }
-            body.appendChild(row1);
+            body.appendChild(rowForRun);
         });
 
         next.parentNode.insertBefore(newTable, next);
