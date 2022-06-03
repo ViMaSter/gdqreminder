@@ -84,10 +84,11 @@
     let next = null;
     
     document.addEventListener('updateGDQReminderData', async (e) => {
-        const shorthand = document.querySelector("h1").innerText.split(" ")[0];
-        const runs = await (await fetch(`https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${shorthand}`)).json();
+        const events = await (await fetch("https://gamesdonequick.com/tracker/api/v1/search/?type=event")).json();
+        const currentShorthand = events.filter(e=>e.fields.short.toLowerCase().includes("gdq")).sort((a,b)=>new Date(b.fields.datetime) - new Date(a.fields.datetime))[0].fields.short;
+        const runs = await (await fetch(`https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${currentShorthand}`)).json();
         const lastRun = runs.sort((a, b) => new Date(b.fields.endtime).getTime() - new Date(a.fields.endtime).getTime())[0];
-        const hasCompleted = new Date(lastRun.fields.endtime).getTime() < Date.now();
+        const hasCompleted = !lastRun ? false : new Date(lastRun.fields.endtime).getTime() < Date.now();
 
         const watchedPK = e.detail ? Object.keys(e.detail).map(pk => parseInt(pk)) : [];
 
