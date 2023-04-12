@@ -4,7 +4,7 @@
           dsn:
             "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
           tracesSampleRate: 1.0,
-          release: "1.0.1",
+          release: "1.1.0",
         });
       });
 
@@ -31,6 +31,7 @@
         background-color: rgba(0, 0, 0, 0.5);
     }
     tr.passed td {
+        text-align: left;
         border-color: rgba(0, 0, 0, 0.5) !important;
     }
     tr.current {
@@ -40,6 +41,10 @@
         border-left: 50px solid transparent;
         border-right: 50px solid transparent;
     }
+    table.hide-runs-without-reminders tr:not([class]) {
+        display: none;
+    }
+
     tr.checked {
         background: hwb(347deg 75% 5%);
     }
@@ -56,7 +61,7 @@
       position: sticky;
       top: 0;
       background-color: #333!important;
-      text-align: center;
+      text-align: left;
       color: white;
       z-index: 1000;
       border-top: 0 !important;
@@ -82,8 +87,9 @@
 
     let currentRow = null;
     let next = null;
-    
-    document.addEventListener('updateGDQReminderData', async (e) => {
+    let table = null;
+
+    const updateTable = async (e) => {
         const events = await (await fetch("https://gamesdonequick.com/tracker/api/v1/search/?type=event")).json();
         const currentShorthand = events.filter(e=>e.fields.short.toLowerCase().includes("gdq")).sort((a,b)=>new Date(b.fields.datetime) - new Date(a.fields.datetime))[0].fields.short;
         const runs = await (await fetch(`https://gamesdonequick.com/tracker/api/v1/search/?type=run&eventshort=${currentShorthand}`)).json();
@@ -103,7 +109,7 @@
             <th>Length</td>
             <th>Run</td>
             <th class="visible-lg"><i class="fa fa-microphone"></i> Runners &amp; Host</td>
-            ${hasCompleted ? '' : '<th>Set&nbsp;Reminder?</td>'}
+            ${hasCompleted ? '' : '<th>Active&nbsp;Reminder</td>'}
         </tr>`;
         newTable.appendChild(head);
 
@@ -116,17 +122,18 @@
             const startTime = new Date(entry.fields.starttime);
             const endTime = new Date(entry.fields.endtime);
             const day = `${startTime.getFullYear()}-${startTime.getMonth()}-${startTime.getDay()}`;
+            const dateFormat = Intl.NumberFormat().resolvedOptions().locale;
             if (!daysInserted.includes(day)) {
                 daysInserted.push(day);
                 const daySplit = document.createElement("tr");
                 daySplit.classList.add("day-split", "offset");
-                daySplit.innerHTML = `<th colspan="20">${new Date(startTime).toLocaleDateString(Intl.NumberFormat().resolvedOptions().locale)}</td>`;
+                daySplit.innerHTML = `<th colspan="20">${new Date(startTime).toLocaleDateString(Intl.NumberFormat().resolvedOptions().locale, {weekday: "long", year: 'numeric', month: 'long', day: 'numeric'})}</td>`;
                 body.appendChild(daySplit);
             }
             const rowForRun = document.createElement("tr");
             rowForRun.innerHTML = `
-                <td class="start-time text-right"><span class="timefont">${startTime.toLocaleTimeString(Intl.NumberFormat().resolvedOptions().locale).replace(/\s/, "&nbsp;")}</span></td>
-                <td class="text-right"><span class="timefont">${entry.fields.run_time == "0" ? "0:00:00" : entry.fields.run_time}</span> </td>
+                <td class="start-time"><span class="timefont">${startTime.toLocaleTimeString(Intl.NumberFormat().resolvedOptions().locale).replace(/\s/, "&nbsp;")}</span></td>
+                <td><span class="timefont">${entry.fields.run_time == "0" ? "0:00:00" : entry.fields.run_time}</span> </td>
                 <td>${entry.fields.display_name} <span class="details">(${entry.fields.category} — ${entry.fields.console})</span></td>
                 <td>${entry.fields.deprecated_runners}</td>
                 ${hasCompleted ? '' : '<td class="text-center"> </td>'}`;
@@ -196,7 +203,37 @@
                 window.scrollTo(document.documentElement.scrollLeft, document.documentElement.scrollTop-offset);
             }
         }
+        table = newTable;
+    };
+    
+    document.addEventListener('updateGDQReminderData', async (e) => {
+        await updateTable(e);
     });
+
+    const addToggleForRunsWithReminder = () => {
+        const existingButton = document.querySelector("#white-bg > *:not(nav) > .btn");
+        const newButton = document.createElement("a");
+        newButton.href = "#";
+        newButton.classList.add("btn", "btn-primary", "extra-button-space");
+        newButton.innerText = "Hide Runs without Reminders";
+
+        const toggleVisibilityForRunsWithoutReminders = (e) => {
+            if (table)
+            {
+                table.classList.toggle("hide-runs-without-reminders");
+                if (table.classList.contains("hide-runs-without-reminders"))
+                {
+                    newButton.innerText = "Show Runs without Reminders";
+                } else {
+                    newButton.innerText = "Hide Runs without Reminders";
+                }
+            }
+            e.preventDefault();
+            return false;
+        };
+        newButton.addEventListener("click", toggleVisibilityForRunsWithoutReminders);
+        existingButton.insertAdjacentElement("afterEnd", newButton);
+    };
 
     window.addEventListener("load", () => {
         const runTable = document.querySelector('#runTable');
@@ -208,6 +245,8 @@
             }
             runTable.remove();
         }
+
+        addToggleForRunsWithReminder();
         document.dispatchEvent(new CustomEvent('getGDQReminderData'))
     });
 })();

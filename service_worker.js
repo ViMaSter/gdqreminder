@@ -5,7 +5,7 @@ Sentry.init
     dsn:
     "https://743694222a6d4b2aba7ab3cefa261d88@o489289.ingest.sentry.io/6146927",
     tracesSampleRate: 1.0,
-    release: "1.0.1",
+    release: "1.1.0",
 });
 
 const gdqIcon = "icon/192.png";
@@ -94,6 +94,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
     if (!Object.keys(changes).includes(storage.key)) {
         console.log("service worker update loop skipping since irrelevant storage key changed");
     }
+
+    console.log({key: storage.key, log: changes[storage.key]});
     const storageDataEntries = Object.keys(changes[storage.key].newValue);
 
     if (lastKeys && storageDataEntries.sort() == lastKeys.sort())
